@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣歷史點點挑戰</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 React, ReactDOM 與 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 載入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #FFFDF5;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* 點點背景樣式 */
+        .dot-pattern {
+            background-image: radial-gradient(#000 2.5px, transparent 2.5px);
+            background-size: 40px 40px;
+        }
+
+        /* Tada 動畫特效 */
+        @keyframes tada {
+            0% { transform: scale(1); }
+            10%, 20% { transform: scale(0.9) rotate(-3deg); }
+            30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+            40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+        .animate-tada {
+            animation: tada 1s infinite;
+        }
+
+        /* 自定義圓角與陰影 */
+        .rounded-dot {
+            border-radius: 2.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+        // 歷史事件資料庫 (包含問題、選項、情緒讚美與歷史故事)
+        const events = [
+            { id: 1, year: "1980", title: "新竹科學園區成立", question: "1980年成立的哪一個機構奠定了台灣「半導體王國」的基礎？", options: ["加工出口區", "新竹科學工業園區", "工業技術研究院", "數位發展部"], answer: 1, praise: "太棒了！你就是高科技小天才！", story: "當時政府決定轉型高科技，科學園區的成立讓台灣從客廳代工走向了世界晶片中心。" },
+            { id: 2, year: "1984", title: "江南案", question: "作家劉宜良在美國遇刺的「江南案」，對當時台灣政局最大的影響是什麼？", options: ["引發美軍駐台", "促使蔣經國體認威權統治必須改變", "導致兩岸爆發戰爭", "造成經濟大蕭條"], answer: 1, praise: "觀察入微！你對歷史轉折點的掌握真精準！", story: "此事件震撼台美關係，也讓蔣經國先生下定決心推動民主化與解嚴。" },
+            { id: 3, year: "1986", title: "民主進步黨成立", question: "1986年，台灣第一個本土反對黨在圓山大飯店宣布成立，它是？", options: ["時代力量", "台灣民眾黨", "民主進步黨", "親民黨"], answer: 2, praise: "完全正確！你對民主進程瞭如指掌！", story: "在當時尚未解嚴的壓力下，這是一次充滿勇氣的政治冒險。" },
+            { id: 4, year: "1987", title: "解除戒嚴", question: "1987年蔣經國總統宣布解嚴，台灣結束了長達幾年的戒嚴狀態？", options: ["10年", "25年", "38年", "50年"], answer: 2, praise: "超強記憶力！這個歷史大日子你抓得真穩！", story: "台灣解除了全世界最長之一的戒嚴令，言論與集會自由終於綻放。" },
+            { id: 5, year: "1987", title: "開放兩岸探親", question: "1987年政府開放老兵回大陸探親，主要是基於什麼考量？", options: ["經濟貿易", "軍事演習", "人道立場", "外交壓力"], answer: 2, praise: "答對了！你是一個溫暖又博學的人呢！", story: "老兵們在離家四十年後，終於能帶著思念回到家鄉，是非常感人的時刻。" },
+            { id: 6, year: "1988", title: "蔣經國逝世與李登輝繼任", question: "蔣經國逝世後，由哪一位副總統繼任，成為首位台灣本土出身的總統？", options: ["連戰", "李登輝", "宋楚瑜", "陳水扁"], answer: 1, praise: "好優秀！你對領導人物的更迭非常清楚喔！", story: "李登輝總統的上任，正式開啟了台灣本土化與後續民主改革的轉型階段。" },
+            { id: 7, year: "1988", title: "520農民運動", question: "1988年的「520農民運動」，農民上街頭的主要訴求與什麼有關？", options: ["土地改革", "農保與農業政策優化", "反對興建核電廠", "加入WTO"], answer: 1, praise: "太讚了！你很關注社會正義與基層權益！", story: "這是台灣戰後最大規模的農民示威，促使政府全面檢討農業社會福利制度。" },
+            { id: 8, year: "1990", title: "野百合學運", question: "1990年大學生在中正紀念堂靜坐，要求廢除臨時條款、解散萬年國會的運動是？", options: ["太陽花學運", "野百合學運", "五四運動", "草莓族運動"], answer: 1, praise: "歷史大師是你！這個學運精神你抓得超棒！", story: "學生提出的四大訴求後來幾乎全部實現，奠定了台灣憲政改革的基礎。" },
+            { id: 9, year: "1992", title: "國會全面改選", question: "1992年終結了「萬年國會」，指的是哪一個機構的代表全面改選？", options: ["立法院與國民大會", "行政院", "司法院", "監察院"], answer: 0, praise: "知識廣博！你對制度演變的認識讓人佩服！", story: "從此以後，所有的民意代表都由台灣兩千三百萬人民親自選出。" },
+            { id: 10, year: "1995", title: "全民健保實施", question: "1995年實施的一項重大社會福利制度，至今仍讓台灣醫療體系享譽國際？", options: ["勞工保險", "全民健康保險", "國民年金", "長照計畫"], answer: 1, praise: "生活智慧王！沒錯，健保就是台灣的驕傲！", story: "健保大幅降低了台灣人的醫療負擔，被譽為台灣最成功的政策之一。" },
+            { id: 11, year: "1996", title: "首屆總統直選", question: "1996年台灣舉行首屆總統直選，最終由誰當選第一任民選總統？", options: ["彭明敏", "林洋港", "陳履安", "李登輝"], answer: 3, praise: "掌聲鼓勵！你見證了民主發展的最美篇章！", story: "雖然當時有台海危機，但台灣人依然勇敢地完成首次由人民直選總統的壯舉。" },
+            { id: 12, year: "1999", title: "921大地震", question: "1999年發生在南投集集的強震，造成全台慘重傷亡，這場地震稱為？", options: ["白河地震", "921大地震", "維冠大地震", "花蓮大地震"], answer: 1, praise: "心思細膩！答對了，這是我們共同的記憶。加油！", story: "雖然災情慘重，但全台灣展現了驚人的凝聚力與救災熱忱。" },
+            { id: 13, year: "2000", title: "首次政黨輪替", question: "2000年哪一位總統參選人勝選，終結了國民黨在台長達55年的執政？", options: ["宋楚瑜", "馬英九", "連戰", "陳水扁"], answer: 3, praise: "登峰造極！你對現代台灣的轉變掌握得無懈可擊！", story: "陳水扁先生當選後，台灣完成了和平的政黨輪替，這在亞洲民主史是非常重要的指標。" },
+        ];
+
+        const DOT_COLORS = ['bg-[#FF6B6B]', 'bg-[#4ECDC4]', 'bg-[#FFE66D]', 'bg-[#FF9FF3]', 'bg-[#54A0FF]'];
+
+        const App = () => {
+            const [shuffledEvents, setShuffledEvents] = useState([]);
+            const [selectedIdx, setSelectedIdx] = useState(null);
+            const [gameState, setGameState] = useState({});
+            const [score, setScore] = useState(0);
+            const [showModal, setShowModal] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            const [isMuted, setIsMuted] = useState(false);
+
+            // 確保 Lucide 圖標正確渲染
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            });
+
+            const speak = useCallback((text) => {
+                if (isMuted) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }, [isMuted]);
+
+            const resetGame = () => {
+                const shuffled = [...events]
+                    .sort(() => Math.random() - 0.5)
+                    .map(ev => ({ 
+                        ...ev, 
+                        color: DOT_COLORS[Math.floor(Math.random() * DOT_COLORS.length)] 
+                    }));
+                setShuffledEvents(shuffled.slice(0, 16));
+                setGameState({});
+                setScore(0);
+                setSelectedIdx(null);
+                setShowModal(false);
+                setFeedback(null);
+                speak("歷史點點派對重新開始囉！快來挑戰吧！");
+            };
+
+            useEffect(() => {
+                resetGame();
+            }, []);
+
+            const handlePoke = (idx) => {
+                if (gameState[idx] === 'revealed' || showModal) return;
+                setSelectedIdx(idx);
+                setShowModal(true);
+                setFeedback(null);
+                const event = shuffledEvents[idx];
+                speak(`${event.question}。選項有：A ${event.options[0]}。B ${event.options[1]}。C ${event.options[2]}。D ${event.options[3]}`);
+            };
+
+            const handleAnswer = (optionIdx) => {
+                const currentEvent = shuffledEvents[selectedIdx];
+                const isCorrect = optionIdx === currentEvent.answer;
+
+                if (isCorrect) {
+                    setFeedback({ isCorrect: true, message: currentEvent.praise });
+                    setScore(prev => prev + 1);
+                    speak(`答對了！${currentEvent.praise}。讓我們聽聽這段故事：${currentEvent.story}`);
+                    setTimeout(() => {
+                        setGameState(prev => ({ ...prev, [selectedIdx]: 'revealed' }));
+                        setShowModal(false);
+                    }, 5500); // 留時間聽故事
+                } else {
+                    setFeedback({ isCorrect: false, message: `正確答案是：${currentEvent.options[currentEvent.answer]}` });
+                    speak(`差一點點！正確答案是：${currentEvent.options[currentEvent.answer]}。沒關係，下一題加油！`);
+                    setTimeout(() => setShowModal(false), 3000);
+                }
+            };
+
+            return (
+                <div className="min-h-screen p-3 md:p-8 relative">
+                    {/* 點點背景圖騰層 */}
+                    <div className="fixed inset-0 opacity-5 pointer-events-none dot-pattern"></div>
+
+                    <div className="max-w-4xl mx-auto relative z-10">
+                        {/* Header 標題區 */}
+                        <header className="bg-white rounded-dot p-6 md:p-10 shadow-2xl border-b-[12px] border-slate-200 mb-8 flex flex-col items-center text-center">
+                            <div className="flex items-center gap-3 mb-2">
+                                <i data-lucide="sparkles" className="text-pink-500 w-10 h-10 animate-pulse"></i>
+                                <h1 className="text-5xl md:text-7xl font-black text-slate-800">
+                                    歷史<span className="text-pink-500">點點點</span>
+                                </h1>
+                            </div>
+                            <p className="text-2xl font-bold text-slate-400 mb-6">1980 - 2000 時代回顧挑戰</p>
+                            
+                            <div className="w-full flex justify-between items-center bg-slate-50 rounded-3xl p-4 border-2 border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center shadow-md">
+                                        <i data-lucide="trophy" className="text-white w-6 h-6"></i>
+                                    </div>
+                                    <span className="text-3xl font-black text-slate-700">得分：{score}</span>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setIsMuted(!isMuted)} 
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 transition-all ${isMuted ? 'bg-slate-200 border-slate-300 text-slate-400' : 'bg-white border-sky-400 text-sky-500 shadow-md'}`}
+                                    >
+                                        <i data-lucide={isMuted ? "volume-x" : "volume-2"} className="w-8 h-8"></i>
+                                    </button>
+                                    <button 
+                                        onClick={resetGame} 
+                                        className="bg-pink-500 text-white w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg border-4 border-pink-600 transition-all active:translate-y-1"
+                                    >
+                                        <i data-lucide="rotate-ccw" className="w-8 h-8"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* 戳戳樂網格區 */}
+                        <main className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8 mb-12">
+                            {[...Array(16)].map((_, i) => {
+                                const isRevealed = gameState[i] === 'revealed';
+                                const dotColor = shuffledEvents[i]?.color || 'bg-white';
+                                return (
+                                    <button
+                                        key={i}
+                                        disabled={isRevealed || showModal}
+                                        onClick={() => handlePoke(i)}
+                                        className={`
+                                            relative aspect-square transition-all duration-300 rounded-dot border-[6px] md:border-[8px]
+                                            flex flex-col items-center justify-center p-2 overflow-hidden shadow-xl
+                                            ${isRevealed 
+                                                ? 'bg-white border-green-400 cursor-default' 
+                                                : `${dotColor} border-white hover:scale-105 active:scale-95 hover:rotate-2`}
+                                        `}
+                                    >
+                                        {!isRevealed ? (
+                                            <span className="text-7xl md:text-8xl font-black text-white drop-shadow-[4px_4px_0px_rgba(0,0,0,0.2)]">
+                                                {i + 1}
+                                            </span>
+                                        ) : (
+                                            <div className="flex flex-col items-center animate-in zoom-in duration-500 text-center px-1">
+                                                <span className="text-xs md:text-sm font-black text-pink-500 mb-1">{shuffledEvents[i]?.year}</span>
+                                                <span className="text-base md:text-xl font-black text-slate-800 leading-tight">
+                                                    {shuffledEvents[i]?.title}
+                                                </span>
+                                                <i data-lucide="check-circle-2" className="text-green-500 w-6 h-6 mt-2"></i>
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </main>
+
+                        {/* 底部教師提示 */}
+                        <footer className="text-center text-slate-300 font-bold text-lg pb-10">
+                            <p>💡 每一個彩色圓點都藏著一段台灣的故事，答對還有歷史筆記喔！</p>
+                        </footer>
+
+                        {/* 問題彈窗 (Modal) */}
+                        {showModal && selectedIdx !== null && (
+                            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg flex items-center justify-center p-4 z-50">
+                                <div className="bg-white rounded-[3.5rem] border-[12px] border-white shadow-2xl max-w-3xl w-full p-8 md:p-14 relative overflow-hidden animate-in zoom-in duration-300">
+                                    <div className="text-center relative z-10">
+                                        <div className="bg-pink-50 text-pink-500 px-8 py-2 rounded-full text-2xl font-black mb-8 inline-block border-2 border-pink-100">
+                                            🌟 第 {selectedIdx + 1} 號挑戰 🌟
+                                        </div>
+                                        
+                                        <h2 className="text-3xl md:text-5xl font-black mb-12 text-slate-800 leading-[1.2]">
+                                            {shuffledEvents[selectedIdx].question}
+                                        </h2>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                            {shuffledEvents[selectedIdx].options.map((option, oIdx) => (
+                                                <button
+                                                    key={oIdx}
+                                                    disabled={feedback !== null}
+                                                    onClick={() => handleAnswer(oIdx)}
+                                                    className={`
+                                                        w-full p-6 text-left rounded-3xl border-4 transition-all text-2xl md:text-3xl font-black flex items-center
+                                                        ${feedback === null ? 'bg-slate-50 border-slate-100 hover:border-pink-500 hover:bg-pink-50 hover:-translate-y-1' : ''}
+                                                        ${feedback?.isCorrect && oIdx === shuffledEvents[selectedIdx].answer ? 'bg-green-500 border-green-600 text-white shadow-lg' : ''}
+                                                        ${feedback && !feedback.isCorrect && oIdx === optionIdx ? 'bg-pink-500 border-pink-700 text-white' : ''}
+                                                        ${feedback && !feedback.isCorrect && oIdx === shuffledEvents[selectedIdx].answer ? 'bg-green-100 border-green-300 text-green-700' : ''}
+                                                    `}
+                                                >
+                                                    <span className={`w-14 h-14 rounded-2xl flex items-center justify-center mr-4 shrink-0 border-2 font-black ${feedback === null ? 'bg-white text-slate-300 border-slate-200' : 'bg-white/20 border-white'}`}>
+                                                        {['A', 'B', 'C', 'D'][oIdx]}
+                                                    </span>
+                                                    {option}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* 答題回饋區 */}
+                                        {feedback && (
+                                            <div className={`mt-10 p-8 rounded-[2.5rem] border-4 flex flex-col items-center gap-4 animate-in slide-in-from-bottom-8 ${feedback.isCorrect ? 'bg-yellow-50 border-yellow-400' : 'bg-slate-50 border-slate-200'}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <i 
+                                                        data-lucide={feedback.isCorrect ? "award" : "heart"} 
+                                                        className={`w-12 h-12 ${feedback.isCorrect ? "text-yellow-500 animate-tada" : "text-slate-300"}`}
+                                                    ></i>
+                                                    <span className="text-3xl font-black text-slate-800">
+                                                        {feedback.isCorrect ? "完全正確！太強了！" : "沒關係，下次再試試！"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-pink-500 text-center italic">「{feedback.message}」</p>
+                                                
+                                                {feedback.isCorrect && (
+                                                    <div className="mt-4 p-6 bg-white rounded-3xl border-2 border-yellow-100 text-left w-full flex gap-4 items-start">
+                                                        <i data-lucide="book-open" className="text-yellow-500 shrink-0 w-8 h-8 mt-1"></i>
+                                                        <p className="text-xl font-bold text-slate-600 leading-relaxed italic">
+                                                            歷史筆記：{shuffledEvents[selectedIdx].story}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
